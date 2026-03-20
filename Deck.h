@@ -1,125 +1,83 @@
 #pragma once
-#include <iostream>
+#include <string>
+#include <vector>
+#include <random>
+
 class Deck
 {
 public:
-    enum ValueCard
-    {
-        six, seven, eight, nine, ten, jack, queen, king, ace
-    };
-    enum SuitCard
-    {
-        herts, diamonds, spades, clubs
-    };
+    enum Value { six, seven, eight, nine, ten, jack, queen, king, ace };
+    enum Suit { Hearts, Diamonds, Spades, Clubs };
 
     struct Card
     {
-        ValueCard vc;
-        SuitCard sc;
-        std::string ToString()
+        Value v;
+        Suit  s;
+
+        std::string RankStr() const
         {
-            std::string str;
-            switch (vc)
-            {
-            case Deck::six:
-                str += "6";
-                break;
-            case Deck::seven:
-                str += "7";
-                break;
-            case Deck::eight:
-                str += "8";
-                break;
-            case Deck::nine:
-                str += "9";
-                break;
-            case Deck::ten:
-                str += "10";
-                break;
-            case Deck::jack:
-                str += "J";
-                break;
-            case Deck::queen:
-                str += "Q";
-                break;
-            case Deck::king:
-                str += "K";
-                break;
-            case Deck::ace:
-                str += "A"; 
-                break;
-            }
-            switch (sc)
-            {
-            case Deck::herts:
-                str += ((char)(3));
-                break;
-            case Deck::diamonds:
-                str += ((char)(4));
-                break;
-            case Deck::spades:
-                str += ((char)(6));
-                break;
-            case Deck::clubs:
-                str += ((char)(5));
-                break;
-            }
-            return str;
+            const char* names[] = { "6","7","8","9","10","J","Q","K","A" };
+            return names[v];
+        }
+
+        std::string SuitStr() const
+        {
+            const char* names[] = { "H","D","S","C" };
+            return names[s];
+        }
+
+        bool IsRed() const { return s == Hearts || s == Diamonds; }
+ 
+        std::string ColorSuit() const
+        {
+            std::string sym = SuitStr();
+            if (IsRed()) return "\33[31m" + sym + "\33[0m";
+            return "\33[37m" + sym + "\33[0m";
+        }
+
+         std::vector<std::string> Lines() const
+        {
+            std::string rank = RankStr();
+            while (rank.size() < 2) rank += " ";
+            return {
+                ".-----.",
+                "| " + rank + " " + ColorSuit() + " |",
+                "'-----'"
+            };
+        }
+
+        static std::vector<std::string> HiddenLines()
+        {
+            return { ".-----.", "| ### |", "'-----'" };
         }
     };
-private:
-    Card* deck;
-    Card* myHand;
-    int cardPointer = 0;
-public:
-    Deck()
+
+    Deck() { Reset(); }
+
+    void Reset()
     {
-        myHand = nullptr;
-        deck = new Card[36];
-        for (size_t i = 0; i < 9; i++)
-        {
-            for (size_t j = 0; j < 4; j++)
-            {
-                deck[i + j * 4].vc = (ValueCard)i;
-                deck[i + j * 4].sc = (SuitCard)j;
-            }
-        }
+        cards.clear();
+        top = 0;
+        for (int v = 0; v < 9; v++)
+            for (int s = 0; s < 4; s++)
+                cards.push_back({ (Value)v, (Suit)s });
     }
 
     void Shuffle()
     {
-        srand(time(NULL));
-        for (size_t i = 0; i < 37; i++)
+        Reset();
+        static std::mt19937 rng(std::random_device{}());
+        for (int i = 0; i < (int)cards.size(); i++)
         {
-            int index = rand() % 37;
-            Card temp = deck[i];
-            deck[i] = deck[index];
-            deck[index] = temp;
+            int j = std::uniform_int_distribution<int>(0, (int)cards.size() - 1)(rng);
+            std::swap(cards[i], cards[j]);
         }
     }
 
-    void Print()
-    {
-        for (size_t i = 0; i < 9; i++)
-        {
-            for (size_t j = 0; j < 4; j++)
-            {
-                std::cout << deck[i * 9 + j].ToString() << "\t";
-            }
-            std::cout << std::endl;
-        }
-        std::cout << std::endl;
-    }
+    Card Deal() { return cards[top++]; }
+    int Left() const { return (int)cards.size() - top; }
 
-    Card* Deal()
-    {
-        Card* hand = new Card[5];
-        for (size_t i = 0; i < 5; i++)
-        {
-            hand[i] = deck[i + cardPointer];
-        }
-        cardPointer = 5;
-        return hand;
-
-    }
+private:
+    std::vector<Card> cards;
+    int top = 0;
 };
